@@ -274,6 +274,8 @@ function sfx(name) {
     case 'beam': tone(300, 0.3, 'sawtooth', 0.08, 900); break;
     case 'kill': tone(320, 0.07, 'triangle', 0.06, -200); break;
     case 'boom': noise(0.5, 0.3); tone(90, 0.5, 'sine', 0.3, -50); break;
+    case 'poop': tone(240, 0.14, 'triangle', 0.14, -150); tone(130, 0.1, 'sine', 0.12, 60, 0.08); break;
+    case 'poopBoom': noise(0.38, 0.26); tone(110, 0.38, 'sawtooth', 0.22, -70); tone(220, 0.2, 'square', 0.12, -140, 0.05); break;
     case 'heal': [660, 880, 1100].forEach((f, i) => tone(f, 0.12, 'sine', 0.12, 0, i * 0.07)); break;
     case 'levelup': [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.16, 'square', 0.09, 0, i * 0.07)); break;
     case 'select': tone(880, 0.08, 'square', 0.08); break;
@@ -387,15 +389,21 @@ function makeEnemySprite(type) {
       eyes(r * .35, -r * .1, r * .22);
       break;
     case 'bat':
+      g.lineJoin = 'round';
+      g.strokeStyle = '#4dff79'; g.lineWidth = 3;
       g.fillStyle = '#5b2a86';
       for (const sx of [-1, 1]) {
         g.beginPath(); g.moveTo(sx * r * .3, -r * .2);
         g.lineTo(sx * r * 1.4, -r * .8); g.lineTo(sx * r * 1.2, 0); g.lineTo(sx * r * 1.4, r * .3);
-        g.lineTo(sx * r * .9, r * .2); g.lineTo(sx * r * .3, r * .4); g.closePath(); g.fill();
+        g.lineTo(sx * r * .9, r * .2); g.lineTo(sx * r * .3, r * .4); g.closePath();
+        g.stroke(); g.fill();
       }
-      g.fillStyle = '#3d1a5c'; g.beginPath(); g.arc(0, 0, r * .6, 0, TAU); g.fill();
-      g.beginPath(); g.moveTo(-r * .45, -r * .4); g.lineTo(-r * .3, -r * .95); g.lineTo(-r * .1, -r * .5); g.fill();
-      g.beginPath(); g.moveTo(r * .45, -r * .4); g.lineTo(r * .3, -r * .95); g.lineTo(r * .1, -r * .5); g.fill();
+      g.fillStyle = '#3d1a5c';
+      g.beginPath();
+      g.moveTo(-r * .45, -r * .4); g.lineTo(-r * .3, -r * .95); g.lineTo(-r * .1, -r * .5);
+      g.moveTo(r * .45, -r * .4); g.lineTo(r * .3, -r * .95); g.lineTo(r * .1, -r * .5);
+      g.stroke(); g.fill();
+      g.beginPath(); g.arc(0, 0, r * .6, 0, TAU); g.stroke(); g.fill();
       glowEyes(r * .22, -r * .1, r * .13, '#ff3355');
       break;
     case 'ghost':
@@ -513,10 +521,12 @@ const BG = (() => {
 /* ---------------- 武器 ---------------- */
 const STAT_LABEL = { dmg: 'ダメージ', n: '数', pierce: '貫通', cd: '間隔', area: '範囲', dur: '持続', spd: '回転速度' };
 const WEAPONS = {
-  fireball: { name: '火炎ブレス弾', icon: '🔥', stage: 0, max: 8, desc: '近くの敵へ火の玉を吐く',
-    stats: lv => ({ dmg: 11 + lv * 3.5, n: 1 + Math.floor(lv / 2), pierce: 1 + Math.floor(lv / 3), cd: Math.max(0.55, 1.15 - lv * 0.05) }) },
+  fireball: { name: '火炎ブレス弾', icon: '🔥', stage: 0, max: 8, desc: '進行方向へ火の玉を吐く（威力＆速射UP）',
+    stats: lv => ({ dmg: 16 + lv * 5, n: 1 + Math.floor(lv / 2), pierce: 1 + Math.floor((lv + 1) / 3), cd: Math.max(0.38, 0.88 - lv * 0.065) }) },
   tail: { name: '竜尾スラッシュ', icon: '🦎', stage: 0, max: 8, desc: '自分の周囲を一周する円形の弧で敵を薙ぎ払う',
     stats: lv => ({ dmg: 22 + lv * 10, area: 115, cd: Math.max(1.2, 2.8 - lv * 0.18) }) },
+  poop: { name: 'お漏らしボム', icon: '💩', stage: 0, max: 8, desc: '進行逆へうんち設置。踏めば集中爆破＆無敵！時間経過でも広範囲爆発',
+    stats: lv => ({ dmg: 42 + lv * 10, area: 105 + lv * 7, dur: 5.0 + lv * 0.2, cd: Math.max(5.5, 9.0 - lv * 0.4) }) },
   syringe: { name: '毒液シリンジ', icon: '💉', stage: 0, max: 8, evoOnly: true, desc: '注射器を投げ、毒沼を作る（進化ごとにLv+2）',
     stats: lv => ({ dmg: 7 + lv * 3.5, n: 1 + Math.floor(lv / 3), area: 42 + lv * 5, dur: 2.8 + lv * 0.25, cd: Math.max(0.85, 1.85 - lv * 0.08) }) },
   saw: { name: '回転メカソー', icon: '⚙️', stage: 1, max: 8, desc: '丸ノコが周囲を回り続け敵を切り刻む',
@@ -531,7 +541,6 @@ const WEAPONS = {
 const PASSIVES = {
   might:  { name: '闘争本能', icon: '💪', max: 5, desc: '攻撃力 +12%' },
   cd:     { name: '加速装置', icon: '⏱️', max: 5, desc: '攻撃間隔 -8%' },
-  speed:  { name: '俊足の鱗', icon: '👟', max: 5, desc: '移動速度 +10%' },
   hp:     { name: '強靭な肉体', icon: '❤️', max: 5, desc: '最大HP +25' },
   magnet: { name: '吸引の首輪', icon: '🧲', max: 5, desc: '回収範囲 +35%' },
   regen:  { name: '再生細胞', icon: '💚', max: 5, desc: 'HP自動回復 +0.8/秒' },
@@ -542,13 +551,15 @@ const PASSIVES = {
 /* ---------------- ゲーム状態 ---------------- */
 let S = null;
 let P = null;
+let sepTick = 0;
+const sortedEnemies = [];
 const xpFor = l => Math.floor(12 + l * 8 + Math.pow(l, 1.85));
 
 function newGame() {
   S = {
     state: 'play', t: 0, kills: 0, level: 1, xp: 0, xpNext: xpFor(1), stage: 0,
     weapons: [], passives: { regen: 1 }, enemies: [], projs: [], ebullets: [], gems: [], pickups: [],
-    effects: [], parts: [], texts: [], puddles: [],
+    effects: [], parts: [], texts: [], puddles: [], poops: [],
     spawnAcc: 0, bossFlags: {}, pendingLevels: 0, shake: 0, banner: null, evo: null, choices: [],
     finalBoss: null, cam: { x: 0, y: 0 },
   };
@@ -565,7 +576,7 @@ function recalcStats() {
   const oldMax = P.maxHp;
   P.might = (1 + st * 0.15) * (1 + 0.12 * pl('might'));
   P.cd = 1 - 0.08 * pl('cd');
-  P.speed = (155 + st * 8) * (1 + 0.1 * pl('speed'));
+  P.speed = 155 + st * 8;
   P.maxHp = 100 + st * 30 + 25 * pl('hp');
   P.magnet = 80 * (1 + 0.35 * pl('magnet'));
   P.regen = 0.8 * pl('regen') + (st >= 3 ? 1.0 : 0);
@@ -583,15 +594,54 @@ function addWeapon(id) {
   S.weapons.push(nw); return nw;
 }
 
+/* ---------------- ジェムスプライト事前キャッシュ（描画超軽量化） ---------------- */
+const GEM_SPRITES = {};
+(() => {
+  const tiers = [
+    { key: 3, col: '#ffe64d', glow: 'rgba(255,235,90,.58)', s: 12 },
+    { key: 2, col: '#ff4d79', glow: 'rgba(255,85,135,.52)', s: 10.5 },
+    { key: 1, col: '#4dff9a', glow: 'rgba(85,255,165,.48)', s: 9 },
+    { key: 0, col: '#4de6ff', glow: 'rgba(85,235,255,.48)', s: 9 },
+  ];
+  for (const t of tiers) {
+    const pad = 36;
+    const w = Math.ceil(t.s * 4 + pad);
+    const c = document.createElement('canvas'); c.width = c.height = w;
+    const g = c.getContext('2d');
+    const cx = w / 2, cy = w / 2, s = t.s;
+    // 背後オーラ
+    g.fillStyle = t.glow; g.beginPath(); g.arc(cx, cy, s * 2.0, 0, TAU); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.28)'; g.beginPath(); g.arc(cx, cy, s * 1.3, 0, TAU); g.fill();
+    // ダイヤ本体（太い黒フチ＋白ライン）
+    g.beginPath();
+    g.moveTo(cx, cy - s * 1.25); g.lineTo(cx + s * 0.95, cy); g.lineTo(cx, cy + s * 1.25); g.lineTo(cx - s * 0.95, cy);
+    g.closePath();
+    g.lineWidth = 4; g.strokeStyle = '#05100a'; g.stroke();
+    g.fillStyle = t.col; g.fill();
+    g.lineWidth = 1.2; g.strokeStyle = 'rgba(255,255,255,0.85)'; g.stroke();
+    // 白ハイライト
+    g.fillStyle = '#ffffff'; g.beginPath();
+    g.moveTo(cx, cy - s * 0.78); g.lineTo(cx + s * 0.45, cy - s * 0.08); g.lineTo(cx, cy + s * 0.22); g.lineTo(cx - s * 0.45, cy - s * 0.08);
+    g.closePath(); g.fill();
+    GEM_SPRITES[t.key] = { c, w };
+  }
+})();
+
 /* ---------------- 空間グリッド ---------------- */
 const CELL = 64;
 const grid = new Map();
+const gridPool = [];
 const gkey = (cx, cy) => (cx + 50000) * 100000 + (cy + 50000);
 function buildGrid() {
+  for (const a of grid.values()) { a.length = 0; gridPool.push(a); }
   grid.clear();
-  for (const e of S.enemies) {
+  const arr = S.enemies;
+  for (let i = 0; i < arr.length; i++) {
+    const e = arr[i]; if (e.dead) continue;
     const k = gkey(Math.floor(e.x / CELL), Math.floor(e.y / CELL));
-    let a = grid.get(k); if (!a) { a = []; grid.set(k, a); } a.push(e);
+    let a = grid.get(k);
+    if (!a) { a = gridPool.pop() || []; grid.set(k, a); }
+    a.push(e);
   }
 }
 function query(x, y, r, cb) {
@@ -609,9 +659,13 @@ function enemiesInCircle(x, y, r, cb) {
 function nearestEnemies(n, maxD = 650) {
   const arr = [];
   const md2 = maxD * maxD;
-  for (const e of S.enemies) {
+  const enemies = S.enemies;
+  for (let i = 0; i < enemies.length; i++) {
+    const e = enemies[i];
     if (e.dead) continue;
-    const d2 = (e.x - P.x) ** 2 + (e.y - P.y) ** 2;
+    const dx = e.x - P.x, dy = e.y - P.y;
+    if (Math.abs(dx) > maxD || Math.abs(dy) > maxD) continue;
+    const d2 = dx * dx + dy * dy;
     if (d2 < md2) arr.push([d2, e]);
   }
   arr.sort((a, b) => a[0] - b[0]);
@@ -684,14 +738,24 @@ function updateWeapons(dt) {
       case 'fireball':
         if (w.t <= 0) {
           w.t = st.cd * P.cd;
-          const targets = nearestEnemies(st.n);
+          const base = Math.atan2(P.fy, P.fx);
           for (let i = 0; i < st.n; i++) {
-            const tg = targets[i] || targets[0];
-            let a = tg ? Math.atan2(tg.y - P.y, tg.x - P.x) : Math.atan2(P.fy, P.fx) + (i - (st.n - 1) / 2) * 0.25;
-            if (tg && !targets[i]) a += (i - (st.n - 1) / 2) * 0.22;
-            S.projs.push({ kind: 'fire', x: P.x, y: P.y - 10, vx: Math.cos(a) * 430, vy: Math.sin(a) * 430, r: 9 * P.area, dmg: st.dmg, pierce: st.pierce, life: 1.5, hits: new Set() });
+            const a = base + (i - (st.n - 1) / 2) * 0.2;
+            S.projs.push({ kind: 'fire', x: P.x, y: P.y - 10, vx: Math.cos(a) * 485, vy: Math.sin(a) * 485, r: 10.5 * P.area, dmg: st.dmg, pierce: st.pierce, life: 1.4, hits: new Set() });
           }
           sfx('shoot');
+        }
+        break;
+      case 'poop':
+        if (w.t <= 0) {
+          w.t = st.cd * P.cd;
+          const bx = P.x - P.fx * 44, by = P.y - P.fy * 44;
+          S.poops.push({
+            x: bx, y: by, r: 22, blastR: st.area * P.area, dmg: st.dmg,
+            life: st.dur, max: st.dur, arm: 0.35, seed: Math.random() * 10
+          });
+          burst(bx, by, '#a86b2d', 6, 70);
+          sfx('poop');
         }
         break;
       case 'tail':
@@ -775,7 +839,12 @@ function updateWeapons(dt) {
       case 'lightning':
         if (w.t <= 0) {
           w.t = st.cd * P.cd;
-          const vis = S.enemies.filter(e => !e.dead && Math.abs(e.x - P.x) < W / 2 + 20 && Math.abs(e.y - P.y) < H / 2 + 20);
+          const vis = [];
+          const hW = W / 2 + 20, hH = H / 2 + 20;
+          for (let j = 0; j < S.enemies.length; j++) {
+            const e = S.enemies[j];
+            if (!e.dead && Math.abs(e.x - P.x) < hW && Math.abs(e.y - P.y) < hH) vis.push(e);
+          }
           for (let i = 0; i < st.n && vis.length; i++) {
             const idx = Math.floor(Math.random() * vis.length);
             const e = vis.splice(idx, 1)[0];
@@ -911,14 +980,31 @@ function update(dt) {
     }
     if (d < e.r + P.r) damagePlayer(e.dmg);
   }
-  // 敵同士の押し合い
-  for (const e of S.enemies) {
+  // 敵同士の押し合い（直接セル参照＆偶奇分散で超高速化）
+  sepTick = 1 - sepTick;
+  const enemies = S.enemies;
+  for (let i = sepTick; i < enemies.length; i += 2) {
+    const e = enemies[i];
     if (e.dead || e.boss) continue;
-    query(e.x, e.y, e.r, o => {
-      if (o === e) return;
-      const dx = e.x - o.x, dy = e.y - o.y, rr = (e.r + o.r) * 0.9, d2 = dx * dx + dy * dy;
-      if (d2 < rr * rr && d2 > 0.01) { const d = Math.sqrt(d2), p = (rr - d) * 0.3; e.x += dx / d * p; e.y += dy / d * p; }
-    });
+    const cx = Math.floor(e.x / CELL), cy = Math.floor(e.y / CELL);
+    for (let ox = -1; ox <= 1; ox++) {
+      for (let oy = -1; oy <= 1; oy++) {
+        const cell = grid.get(gkey(cx + ox, cy + oy));
+        if (!cell) continue;
+        for (let j = 0; j < cell.length; j++) {
+          const o = cell[j];
+          if (o === e || o.dead) continue;
+          const dx = e.x - o.x, dy = e.y - o.y;
+          const rr = (e.r + o.r) * 0.9;
+          if (Math.abs(dx) > rr || Math.abs(dy) > rr) continue;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < rr * rr && d2 > 0.01) {
+            const d = Math.sqrt(d2), p = (rr - d) * 0.45;
+            e.x += (dx / d) * p; e.y += (dy / d) * p;
+          }
+        }
+      }
+    }
   }
 
   // 弾
@@ -954,6 +1040,80 @@ function update(dt) {
     if (pd.tick <= 0) { pd.tick = 0.3; enemiesInCircle(pd.x, pd.y, pd.r, e => hurtEnemy(e, pd.dmg * 0.3, 0, 0)); }
   }
   S.puddles = S.puddles.filter(p => p.life > 0);
+
+  // うんち爆風による安全なノックバック方向（自分側へ敵を飛ばす事故を完全防止）
+  function poopBlastDir(e, m) {
+    let bx = e.x - m.x, by = e.y - m.y;
+    let bd = Math.hypot(bx, by) || 1;
+    bx /= bd; by /= bd;
+    let px = e.x - P.x, py = e.y - P.y;
+    let pd = Math.hypot(px, py) || 1;
+    px /= pd; py /= pd;
+    // うんちからの爆風がプレイヤーに近づける向き（内積が小さい/負）なら
+    // プレイヤーから遠ざかる方向＋横拡散ベクトルへ安全にリダイレクト
+    const dot = bx * px + by * py;
+    if (dot < 0.35) {
+      const perpX = bx - px * dot, perpY = by - py * dot;
+      let ox = px * 0.85 + perpX * 0.55;
+      let oy = py * 0.85 + perpY * 0.55;
+      const od = Math.hypot(ox, oy) || 1;
+      return [ox / od, oy / od];
+    }
+    return [bx, by];
+  }
+
+  // お漏らしボム（踏めば高威力集中爆破＆無敵、時間経過でも超広範囲自動爆発）
+  for (const m of S.poops) {
+    m.life -= dt;
+    if (m.arm > 0) m.arm -= dt;
+    const isStep = (m.arm <= 0) && ((P.x - m.x) ** 2 + (P.y - m.y) ** 2 < (P.r + m.r + 6) ** 2);
+    const isTimeout = m.life <= 0;
+
+    if (isStep) {
+      // 1) 自分で踏んだ時：集中爆破＋無敵＋ノックバック
+      m.life = 0;
+      m.exploded = true;
+      P.hurt = Math.max(P.hurt, 0.45); // 起爆時に短い無敵で包囲突破
+      S.shake = Math.max(S.shake, 12);
+      enemiesInCircle(m.x, m.y, m.blastR, e => {
+        const [dirX, dirY] = poopBlastDir(e, m);
+        const dmg = e.boss ? m.dmg * 0.55 : m.dmg;
+        hurtEnemy(e, dmg, dirX * 580, dirY * 580);
+      });
+      // 爆風内の敵弾もかき消す
+      for (const b of S.ebullets) {
+        if ((b.x - m.x) ** 2 + (b.y - m.y) ** 2 < m.blastR ** 2) b.life = 0;
+      }
+      S.effects.push({ kind: 'ring', x: m.x, y: m.y, r: m.blastR, col: '255,200,70', life: 0.38, max: 0.38 });
+      S.effects.push({ kind: 'ring', x: m.x, y: m.y, r: m.blastR * 0.68, col: '185,120,45', life: 0.28, max: 0.28 });
+      burst(m.x, m.y, '#ffd24d', 20, 260);
+      burst(m.x, m.y, '#a86b2d', 16, 190);
+      addText(m.x, m.y - 26, '💩BOOM!!', '#ffe066', 21);
+      sfx('poopBoom');
+    } else if (isTimeout && !m.exploded) {
+      // 2) 時間経過で時限発動：威力40%で広範囲に牽制
+      m.exploded = true;
+      const timedR = m.blastR * 1.35; // 範囲1.35倍
+      const timedDmg = m.dmg * 0.4;   // 威力40%（指定倍率）
+      S.shake = Math.max(S.shake, 8);
+      enemiesInCircle(m.x, m.y, timedR, e => {
+        const [dirX, dirY] = poopBlastDir(e, m);
+        const dmg = e.boss ? timedDmg * 0.5 : timedDmg;
+        hurtEnemy(e, dmg, dirX * 400, dirY * 400);
+      });
+      // 広範囲の敵弾を一掃
+      for (const b of S.ebullets) {
+        if ((b.x - m.x) ** 2 + (b.y - m.y) ** 2 < timedR ** 2) b.life = 0;
+      }
+      S.effects.push({ kind: 'ring', x: m.x, y: m.y, r: timedR, col: '255,225,120', life: 0.42, max: 0.42 });
+      S.effects.push({ kind: 'ring', x: m.x, y: m.y, r: timedR * 0.6, col: '190,140,60', life: 0.3, max: 0.3 });
+      burst(m.x, m.y, '#ffe27a', 16, 220);
+      burst(m.x, m.y, '#b07534', 12, 160);
+      addText(m.x, m.y - 26, '💩BURST!', '#ffd866', 17);
+      sfx('poopBoom');
+    }
+  }
+  S.poops = S.poops.filter(m => m.life > 0);
 
   // 敵弾
   for (const b of S.ebullets) {
@@ -1040,8 +1200,9 @@ function statDiff(id, lv) {
   }
   return out.join(' / ');
 }
-function openLevelUp() {
+function openLevelUp(alreadyOpen = false) {
   S.state = 'levelup';
+  S.shake = 0;
   S.choices = buildChoices();
   sfx('levelup');
   const box = $('cards'); box.innerHTML = '';
@@ -1063,7 +1224,7 @@ function openLevelUp() {
     b.onclick = () => chooseCard(i);
     box.appendChild(b);
   });
-  $('levelup').classList.remove('hidden');
+  if (!alreadyOpen) $('levelup').classList.remove('hidden');
 }
 function chooseCard(i) {
   if (S.state !== 'levelup') return;
@@ -1073,13 +1234,24 @@ function chooseCard(i) {
   else if (c.type === 'p') { S.passives[c.id] = pl(c.id) + 1; recalcStats(); }
   else if (c.type === 'heal') P.hp = Math.min(P.maxHp, P.hp + 50);
   else S.xp += S.xpNext * 0.3;
-  $('levelup').classList.add('hidden');
   S.pendingLevels--;
+  if (S.pendingLevels > 0) {
+    if (S.stage < FORMS.length - 1 && S.level >= FORMS[S.stage + 1].lv) {
+      $('levelup').classList.add('hidden');
+      startEvolution();
+      return;
+    }
+    openLevelUp(true);
+    return;
+  }
+  $('levelup').classList.add('hidden');
+  last = performance.now();
+  if (AC.ctx && BGM.next < AC.ctx.currentTime) BGM.next = AC.ctx.currentTime + 0.05;
   S.state = 'play';
-  if (S.pendingLevels > 0) processLevelQueue();
 }
 function startEvolution() {
   S.state = 'evolve';
+  S.shake = 0;
   S.evo = { t: 0, from: S.stage, to: S.stage + 1, flashT: 0, sounded: false };
 }
 function finishEvolution() {
@@ -1103,6 +1275,8 @@ function finishEvolution() {
   S.effects.push({ kind: 'ring', x: P.x, y: P.y, r: 320, col: '255,255,200', life: 0.6, max: 0.6 });
   S.banner = { txt: `${FORMS[to].name} に進化！`, col: FORMS[to].color, life: 2.5 };
   S.evo = null;
+  last = performance.now();
+  if (AC.ctx && BGM.next < AC.ctx.currentTime) BGM.next = AC.ctx.currentTime + 0.05;
   S.state = 'play';
   if (S.pendingLevels > 0) processLevelQueue();
 }
@@ -1112,8 +1286,9 @@ function render() {
   ctx.clearRect(0, 0, W, H);
   if (!S) { drawBg(performance.now() / 30, performance.now() / 50); return; }
   const cam = S.cam;
-  cam.x = P.x - W / 2 + (S.shake ? rand(-S.shake, S.shake) : 0);
-  cam.y = P.y - H / 2 + (S.shake ? rand(-S.shake, S.shake) : 0);
+  const shake = S.state === 'play' ? S.shake : 0;
+  cam.x = P.x - W / 2 + (shake ? rand(-shake, shake) : 0);
+  cam.y = P.y - H / 2 + (shake ? rand(-shake, shake) : 0);
   drawBg(cam.x, cam.y);
   ctx.save();
   ctx.translate(-cam.x, -cam.y);
@@ -1128,6 +1303,39 @@ function render() {
     ctx.fillStyle = `rgba(220,255,150,${a})`;
     for (let i = 0; i < 3; i++) { const bb = (S.t * 1.5 + i * 0.33 + pd.seed) % 1; ctx.beginPath(); ctx.arc(pd.x + Math.cos(i * 2.1 + pd.seed) * pd.r * 0.5, pd.y + Math.sin(i * 2.1 + pd.seed) * pd.r * 0.4, 2 + bb * 4, 0, TAU); ctx.fill(); }
   }
+  // お漏らしボム（設置うんち）
+  for (const m of S.poops) {
+    const timedR = m.blastR * 1.35;
+    if (!inView(m.x, m.y, timedR)) continue;
+    const armed = m.arm <= 0;
+    const blink = m.life < 2.0 ? (Math.sin(S.t * 22) > 0 ? 1 : 0.35) : 1;
+    const pulse = 1 + Math.sin(S.t * 7 + m.seed) * 0.08;
+    ctx.save();
+    ctx.globalAlpha = blink;
+    // 外側：時限爆発の超広範囲ガイド円
+    ctx.strokeStyle = 'rgba(255,225,120,0.14)';
+    ctx.lineWidth = 1.5; ctx.setLineDash([4, 10]);
+    ctx.beginPath(); ctx.arc(m.x, m.y, timedR, 0, TAU); ctx.stroke();
+    // 内側：直接踏んだ時の高威力爆発範囲ガイド円
+    ctx.strokeStyle = armed ? 'rgba(255,215,80,0.32)' : 'rgba(200,200,200,0.15)';
+    ctx.lineWidth = 2; ctx.setLineDash([8, 8]);
+    ctx.beginPath(); ctx.arc(m.x, m.y, m.blastR, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    // 踏む判定サークル（光る台座）
+    const grd = ctx.createRadialGradient(m.x, m.y, 2, m.x, m.y, m.r * 1.6 * pulse);
+    grd.addColorStop(0, armed ? 'rgba(255,230,90,0.75)' : 'rgba(180,180,180,0.35)');
+    grd.addColorStop(0.65, armed ? 'rgba(255,150,30,0.4)' : 'rgba(120,120,120,0.15)');
+    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(m.x, m.y, m.r * 1.6 * pulse, 0, TAU); ctx.fill();
+    // 残り時間ゲージリング
+    ctx.strokeStyle = '#1a0f05'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = armed ? '#ffdd44' : '#aaa'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(m.x, m.y, m.r, -Math.PI / 2, -Math.PI / 2 + TAU * (m.life / m.max)); ctx.stroke();
+    // 本体アイコン
+    ctx.font = '28px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('💩', m.x, m.y - 2 + Math.sin(S.t * 6 + m.seed) * 2);
+    ctx.restore();
+  }
   // オーラ
   const aura = hasWeapon('aura');
   if (aura && aura.r) {
@@ -1138,40 +1346,65 @@ function render() {
     ctx.strokeStyle = 'rgba(255,240,170,0.5)'; ctx.lineWidth = 2; ctx.setLineDash([10, 8]); ctx.lineDashOffset = -S.t * 40;
     ctx.beginPath(); ctx.arc(P.x, P.y, r * pulse, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
   }
-  // ジェム（視認性アップ：发光リング・黒縁・大型化・キラキラ演出）
-  for (const g of S.gems) {
-    if (!inView(g.x, g.y)) continue;
-    const col = g.v >= 25 ? '#ffe64d' : g.v >= 8 ? '#ff4d79' : g.v >= 3 ? '#4dff9a' : '#4de6ff';
-    const glow = g.v >= 25 ? 'rgba(255,230,77,.42)' : g.v >= 8 ? 'rgba(255,77,121,.38)' : g.v >= 3 ? 'rgba(77,255,154,.34)' : 'rgba(77,230,255,.34)';
-    const s = (g.v >= 25 ? 11 : g.v >= 8 ? 9.5 : 8) * (1 + Math.sin(S.t * 6 + g.x * 0.05) * 0.08);
-    const bob = Math.sin(S.t * 5 + (g.x + g.y) * 0.03) * 2.2;
-    const gx = g.x, gy = g.y + bob;
-    // 背後の発光オーラ
-    ctx.fillStyle = glow;
-    ctx.beginPath(); ctx.arc(gx, gy, s * 1.65, 0, TAU); ctx.fill();
-    // ダイヤ本体（太い黒フチ付きで暗い草の上でもくっきり見える）
-    ctx.beginPath();
-    ctx.moveTo(gx, gy - s * 1.25); ctx.lineTo(gx + s * 0.95, gy); ctx.lineTo(gx, gy + s * 1.25); ctx.lineTo(gx - s * 0.95, gy);
-    ctx.closePath();
-    ctx.lineWidth = 3; ctx.strokeStyle = '#05100a'; ctx.stroke();
-    ctx.fillStyle = col; ctx.fill();
-    // 内側の白いハイライト
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.moveTo(gx, gy - s * 0.75); ctx.lineTo(gx + s * 0.42, gy - s * 0.1); ctx.lineTo(gx, gy + s * 0.2); ctx.lineTo(gx - s * 0.42, gy - s * 0.1);
-    ctx.closePath(); ctx.fill();
+  // ジェム（事前キャッシュスプライトで超高速描画）
+  const st7 = S.t * 7, st5 = S.t * 5;
+  for (let i = 0; i < S.gems.length; i++) {
+    const g = S.gems[i];
+    if (!inView(g.x, g.y, 40)) continue;
+    const tier = g.v >= 25 ? 3 : g.v >= 8 ? 2 : g.v >= 3 ? 1 : 0;
+    const sp = GEM_SPRITES[tier];
+    const pulse = 1 + Math.sin(st7 + g.x * 0.05) * 0.1;
+    const bob = Math.sin(st5 + (g.x + g.y) * 0.03) * 2.4;
+    const dw = sp.w * pulse, dh = sp.w * pulse;
+    ctx.drawImage(sp.c, g.x - dw / 2, g.y + bob - dh / 2, dw, dh);
   }
-  // アイテム
-  ctx.font = '26px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  // アイテム（肉・磁石：光の柱＋二重発光リング＋バウンスで視認性大幅アップ）
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (const it of S.pickups) {
-    if (!inView(it.x, it.y)) continue;
-    const b = Math.sin(S.t * 5) * 3;
-    ctx.fillStyle = 'rgba(255,255,200,.25)'; ctx.beginPath(); ctx.arc(it.x, it.y + b, 18, 0, TAU); ctx.fill();
-    ctx.fillText(it.kind === 'meat' ? '🍖' : '🧲', it.x, it.y + b);
+    if (!inView(it.x, it.y, 100)) continue;
+    const isMeat = it.kind === 'meat';
+    const b = Math.sin(S.t * 5.5 + it.x) * 4;
+    const pulse = 1 + Math.sin(S.t * 8 + it.y) * 0.14;
+    const ix = it.x, iy = it.y + b;
+    // 上方に伸びる光のビーコン柱
+    const pillar = ctx.createLinearGradient(ix, iy - 58, ix, iy + 10);
+    pillar.addColorStop(0, 'rgba(255,255,255,0)');
+    pillar.addColorStop(0.7, isMeat ? 'rgba(110,255,150,0.38)' : 'rgba(100,220,255,0.38)');
+    pillar.addColorStop(1, isMeat ? 'rgba(255,230,100,0.7)' : 'rgba(180,245,255,0.7)');
+    ctx.fillStyle = pillar;
+    ctx.fillRect(ix - 12, iy - 58, 24, 68);
+    // 強い背面グロー
+    const grd = ctx.createRadialGradient(ix, iy, 2, ix, iy, 34 * pulse);
+    grd.addColorStop(0, '#ffffff');
+    grd.addColorStop(0.45, isMeat ? 'rgba(100,255,140,0.85)' : 'rgba(90,220,255,0.85)');
+    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(ix, iy, 34 * pulse, 0, TAU); ctx.fill();
+    // 黒縁＋白黄リング
+    ctx.lineWidth = 4; ctx.strokeStyle = '#05100a';
+    ctx.beginPath(); ctx.arc(ix, iy, 20 * pulse, 0, TAU); ctx.stroke();
+    ctx.lineWidth = 2.5; ctx.strokeStyle = isMeat ? '#a8ff78' : '#78e8ff';
+    ctx.beginPath(); ctx.arc(ix, iy, 20 * pulse, 0, TAU); ctx.stroke();
+    // アイコン＋ラベル
+    ctx.font = '30px serif';
+    ctx.fillText(isMeat ? '🍖' : '🧲', ix, iy);
+    ctx.font = '900 11px sans-serif';
+    ctx.lineWidth = 3; ctx.strokeStyle = '#000';
+    const lbl = isMeat ? 'HP回復' : '全回収';
+    ctx.strokeText(lbl, ix, iy - 26);
+    ctx.fillStyle = isMeat ? '#a8ff78' : '#8ef0ff';
+    ctx.fillText(lbl, ix, iy - 26);
   }
-  // 敵
-  const sorted = S.enemies.filter(e => inView(e.x, e.y, e.r * 2)).sort((a, b) => a.y - b.y);
-  for (const e of sorted) {
+  // 敵（配列再利用でGCフリー化）
+  sortedEnemies.length = 0;
+  const allEnemies = S.enemies;
+  for (let i = 0; i < allEnemies.length; i++) {
+    const e = allEnemies[i];
+    if (inView(e.x, e.y, e.r * 2)) sortedEnemies.push(e);
+  }
+  sortedEnemies.sort((a, b) => a.y - b.y);
+  for (let i = 0; i < sortedEnemies.length; i++) {
+    const e = sortedEnemies[i];
     const sp = ESPR[e.type];
     const sc = e.r / ETYPES[e.type].r;
     const bob = Math.sin(S.t * 8 + e.seed);
@@ -1259,9 +1492,11 @@ function render() {
         ctx.restore(); break;
       }
       case 'bolt': {
-        ctx.strokeStyle = `rgba(255,255,140,${k})`; ctx.lineWidth = 4; ctx.shadowColor = '#ffff66'; ctx.shadowBlur = 14;
-        ctx.beginPath(); f.pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
-        ctx.strokeStyle = `rgba(255,255,255,${k})`; ctx.lineWidth = 1.5; ctx.stroke(); ctx.shadowBlur = 0;
+        // shadowBlurの重いガウスぼかしを二重ストロークに置き換え高速化
+        ctx.beginPath(); f.pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+        ctx.strokeStyle = `rgba(255,240,100,${k * 0.45})`; ctx.lineWidth = 10; ctx.stroke();
+        ctx.strokeStyle = `rgba(255,255,160,${k * 0.9})`; ctx.lineWidth = 3.5; ctx.stroke();
+        ctx.strokeStyle = `rgba(255,255,255,${k})`; ctx.lineWidth = 1.5; ctx.stroke();
         ctx.fillStyle = `rgba(255,255,160,${k * 0.35})`; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1.2 - k * 0.4), 0, TAU); ctx.fill();
         break;
       }
@@ -1276,11 +1511,16 @@ function render() {
   // パーティクル
   for (const p of S.parts) { ctx.globalAlpha = Math.max(0, p.life / p.max); ctx.fillStyle = p.col; ctx.fillRect(p.x - p.r / 2, p.y - p.r / 2, p.r, p.r); }
   ctx.globalAlpha = 1;
-  // ダメージ数値
+  // ダメージ数値（フォントパースキャッシュ）
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  for (const t of S.texts) {
+  let lastFontSize = -1;
+  for (let i = 0; i < S.texts.length; i++) {
+    const t = S.texts[i];
     ctx.globalAlpha = Math.min(1, t.life * 3);
-    ctx.font = `900 ${t.size}px sans-serif`;
+    if (t.size !== lastFontSize) {
+      ctx.font = `900 ${t.size}px sans-serif`;
+      lastFontSize = t.size;
+    }
     ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.strokeText(t.txt, t.x, t.y);
     ctx.fillStyle = t.col; ctx.fillText(t.txt, t.x, t.y);
   }
@@ -1464,19 +1704,27 @@ function drawEvolution() {
 function show(id) { ['title', 'levelup', 'pause', 'result'].forEach(s => $(s).classList.toggle('hidden', s !== id)); }
 function startGame() {
   audioInit(); bgmStart();
+  last = performance.now();
   newGame(); show(null);
 }
 function pauseGame() {
   S.state = 'pause';
+  S.shake = 0;
   const wl = S.weapons.map(w => `<span>${WEAPONS[w.id].icon} ${WEAPONS[w.id].name} Lv${w.lv}</span>`).join('');
   const pa = Object.keys(S.passives).map(id => `<span>${PASSIVES[id].icon} ${PASSIVES[id].name} Lv${S.passives[id]}</span>`).join('');
   $('pauseInfo').innerHTML = `<div>${FORMS[S.stage].name}（${FORMS[S.stage].title}） Lv${S.level}　⏱ ${fmtTime(S.t)}　💀 ${S.kills}</div><div class="wl">${wl}${pa}</div>`;
   show('pause');
 }
-function resumeGame() { S.state = 'play'; show(null); }
+function resumeGame() {
+  last = performance.now();
+  if (AC.ctx && BGM.next < AC.ctx.currentTime) BGM.next = AC.ctx.currentTime + 0.05;
+  S.state = 'play';
+  show(null);
+}
 function endGame(clear) {
   if (S.state === 'over') return;
   S.state = 'over';
+  S.shake = 0;
   sfx(clear ? 'clear' : 'over');
   setTimeout(() => {
     $('resultTitle').textContent = clear ? '🏆 GAME CLEAR!! 🏆' : 'GAME OVER';
@@ -1509,7 +1757,7 @@ $('toTitleBtn').onclick = () => { S = null; show('title'); };
 /* ---------------- メインループ ---------------- */
 let last = performance.now();
 function frame(now) {
-  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const dt = Math.min(0.033, (now - last) / 1000); last = now;
   if (S) {
     if (S.state === 'play') update(dt);
     else if (S.state === 'evolve') S.evo.t += dt;
@@ -1526,4 +1774,4 @@ Promise.all(FORMS.map((_, i) => loadForm(i))).then(imgs => {
 
 </script>
 </body>
-</html>
+</html>```
