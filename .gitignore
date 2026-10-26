@@ -1,0 +1,16 @@
+# System & Temporary Files
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.bak
+
+# Node & Python Scratch
+inspect_*.py
+inspect_*.js
+check_*.js
+diff_*.js
+dump_*.js
+parse_*.js
+prepare_*.js
+commit_*.js
