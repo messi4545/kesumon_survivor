@@ -67,10 +67,24 @@ canvas { display: block; }
 .card .ds { font-size: 13px; color: #cde; margin-top: 3px; }
 .card .key { font-size: 12px; color: #9ab; }
 
-#pauseInfo, #resultInfo { font-size: 16px; line-height: 1.9; }
-#pauseInfo .wl { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 8px; }
-#pauseInfo .wl span { background: rgba(255,255,255,.08); border-radius: 8px; padding: 4px 10px; font-size: 14px; }
-.result-img { height: 180px; filter: drop-shadow(0 6px 12px rgba(0,0,0,.8)); margin-bottom: 8px; }
+#pauseInfo, #resultInfo { font-size: 16px; line-height: 1.8; }
+.result-img { height: 160px; filter: drop-shadow(0 6px 12px rgba(0,0,0,.8)); margin-bottom: 6px; }
+
+/* 取得装備スロット（HUDスタイル） */
+.inv-box { margin: 12px auto 6px; padding: 10px 14px; background: rgba(0,0,0,.45); border: 1.5px solid rgba(255,255,255,.12); border-radius: 12px; display: inline-flex; flex-direction: column; gap: 8px; max-width: 90%; }
+.inv-box .inv-title { font-size: 12px; font-weight: 900; color: #ffd86a; letter-spacing: 1px; }
+.inv-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; }
+.inv-slot { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 44px; height: 44px;
+  background: rgba(10,22,16,.85); border: 1.5px solid rgba(255,215,90,.7); border-radius: 8px; box-shadow: 0 3px 6px rgba(0,0,0,.5); position: relative; transition: transform .1s; }
+.inv-slot:hover { transform: translateY(-2px) scale(1.06); }
+.inv-slot .icon { font-size: 20px; line-height: 1; }
+.inv-slot .lv { font-size: 9.5px; font-weight: 900; color: #ffe27a; margin-top: 2px; }
+.inv-slot.max { border-color: #ff9d3b; box-shadow: 0 0 8px rgba(255,160,50,.5); }
+.inv-slot.max .lv { color: #ff5566; }
+.inv-slot.passive { width: 38px; height: 38px; border-color: rgba(100,190,255,.65); }
+.inv-slot.passive .icon { font-size: 16px; }
+.inv-slot.passive .lv { color: #9fd0ff; font-size: 9px; }
+.inv-slot.passive.max { border-color: #6ee2ff; box-shadow: 0 0 6px rgba(110,226,255,.45); }
 
 .mute { position: fixed; right: 10px; bottom: 10px; z-index: 20; width: 42px; height: 42px; border-radius: 50%;
   border: 2px solid rgba(255,255,255,.3); background: rgba(0,0,0,.45); color: #fff; font-size: 20px; cursor: pointer; }
@@ -91,7 +105,7 @@ canvas { display: block; }
       <p><b>移動</b>：WASD / 矢印キー（スマホは画面をドラッグ）　<b>攻撃</b>：自動</p>
       <p>敵を倒して経験値を集め、レベルアップで<b>進化</b>せよ！</p>
       <p>10分生き延びて現れる<b>最終ボス</b>を倒せばクリア</p>
-      <p class="small">P / Esc：ポーズ　M：サウンド ON/OFF</p>
+      <p class="small">Space / Esc / P：ポーズ　M：サウンド ON/OFF</p>
     </div>
   </div>
 </div>
@@ -320,7 +334,7 @@ const joy = { active: false, id: null, ox: 0, oy: 0, x: 0, y: 0 };
 addEventListener('keydown', e => {
   keys[e.code] = true;
   if (e.code === 'KeyM') toggleMute();
-  if ((e.code === 'Escape' || e.code === 'KeyP') && S) {
+  if ((e.code === 'Escape' || e.code === 'KeyP' || e.code === 'Space') && S) {
     if (S.state === 'play') pauseGame(); else if (S.state === 'pause') resumeGame();
   }
   if (S && S.state === 'levelup') {
@@ -521,8 +535,8 @@ const BG = (() => {
 /* ---------------- 武器 ---------------- */
 const STAT_LABEL = { dmg: 'ダメージ', n: '数', pierce: '貫通', cd: '間隔', area: '範囲', dur: '持続', spd: '回転速度' };
 const WEAPONS = {
-  fireball: { name: '火炎ブレス弾', icon: '🔥', stage: 0, max: 8, desc: '進行方向へ火の玉を吐く（威力＆速射UP）',
-    stats: lv => ({ dmg: 16 + lv * 5, n: 1 + Math.floor(lv / 2), pierce: 1 + Math.floor((lv + 1) / 3), cd: Math.max(0.38, 0.88 - lv * 0.065) }) },
+  fireball: { name: '火炎ブレス弾', icon: '🔥', stage: 0, max: 8, desc: '進行方向へ火の玉を吐く（威力＆貫通＆ノックバックUP）',
+    stats: lv => ({ dmg: 16 + lv * 5, n: 1 + Math.floor(lv / 2), pierce: 2 + Math.floor(lv / 2), cd: Math.max(0.38, 0.88 - lv * 0.065) }) },
   tail: { name: '竜尾スラッシュ', icon: '🦎', stage: 0, max: 8, desc: '自分の周囲を一周する円形の弧で敵を薙ぎ払う',
     stats: lv => ({ dmg: 22 + lv * 10, area: 115, cd: Math.max(1.2, 2.8 - lv * 0.18) }) },
   poop: { name: 'お漏らしボム', icon: '💩', stage: 0, max: 8, desc: '進行逆へうんち設置。踏めば集中爆破＆無敵！時間経過でも広範囲爆発',
@@ -560,7 +574,7 @@ function newGame() {
     state: 'play', t: 0, kills: 0, level: 1, xp: 0, xpNext: xpFor(1), stage: 0,
     weapons: [], passives: { regen: 1 }, enemies: [], projs: [], ebullets: [], gems: [], pickups: [],
     effects: [], parts: [], texts: [], puddles: [], poops: [],
-    spawnAcc: 0, bossFlags: {}, pendingLevels: 0, shake: 0, banner: null, evo: null, choices: [],
+    spawnAcc: 0, clusterAng: 0, clusterT: 0, bossFlags: {}, pendingLevels: 0, shake: 0, banner: null, evo: null, choices: [],
     finalBoss: null, cam: { x: 0, y: 0 },
   };
   P = S.player = { x: 0, y: 0, hp: 100, maxHp: 100, r: 20, fx: 1, fy: 0, face: 1, hurt: 0, moving: false, anim: 0 };
@@ -578,7 +592,7 @@ function recalcStats() {
   P.cd = 1 - 0.08 * pl('cd');
   P.speed = 155 + st * 8;
   P.maxHp = 100 + st * 30 + 25 * pl('hp');
-  P.magnet = 80 * (1 + 0.35 * pl('magnet'));
+  P.magnet = 100 * (1 + 0.35 * pl('magnet'));
   P.regen = 0.8 * pl('regen') + (st >= 3 ? 1.0 : 0);
   P.area = 1 + 0.12 * pl('area');
   P.armor = pl('armor') * 2;
@@ -704,21 +718,27 @@ function killEnemy(e) {
   if (e.type === 'fboss') { S.shake = 25; setTimeout(() => endGame(true), 1200); return; }
   if (e.boss) {
     S.shake = 16;
-    for (let i = 0; i < 20; i++) dropGem(e.x + rand(-60, 60), e.y + rand(-60, 60), Math.ceil(e.xp / 20));
+    for (let i = 0; i < 20; i++) {
+      const a = Math.random() * TAU, sp = rand(80, 220);
+      dropGem(e.x, e.y, Math.ceil(e.xp / 20), Math.cos(a) * sp, Math.sin(a) * sp);
+    }
     S.pickups.push({ x: e.x, y: e.y, kind: 'meat' });
     S.pickups.push({ x: e.x + 30, y: e.y, kind: 'magnet' });
     return;
   }
-  dropGem(e.x, e.y, e.xp);
+  // 敵撃破時にジェムが自機方向へ勢いよく弾む（目に見える初速ポップ＆回収動線）
+  const toP = Math.atan2(P.y - e.y, P.x - e.x) + rand(-0.35, 0.35);
+  const sp = rand(260, 380);
+  dropGem(e.x, e.y, e.xp, Math.cos(toP) * sp, Math.sin(toP) * sp);
   const r = Math.random();
   if (r < 0.0088) S.pickups.push({ x: e.x, y: e.y, kind: 'meat' });
   else if (r < 0.0108) S.pickups.push({ x: e.x, y: e.y, kind: 'magnet' });
 }
-function dropGem(x, y, v) {
+function dropGem(x, y, v, vx = 0, vy = 0) {
   if (S.gems.length > 500) {
     const g = S.gems[Math.floor(Math.random() * S.gems.length)]; g.v += v; return;
   }
-  S.gems.push({ x, y, v, mag: false, sp: 0 });
+  S.gems.push({ x, y, v, vx, vy, mag: false, sp: 0 });
 }
 function damagePlayer(d) {
   if (P.hurt > 0 || S.state !== 'play') return;
@@ -876,10 +896,18 @@ function pickType(t) {
 function spawnEnemy(type, x, y, mult) {
   const d = ETYPES[type];
   if (x === undefined) {
-    const a = Math.random() * TAU, R = Math.hypot(W, H) / 2 + 50;
+    // 65%は波のようにまとまって押し寄せるクラスタ方向から、35%は全方位から散発的に湧く
+    let a;
+    if (Math.random() < 0.65) {
+      a = S.clusterAng + rand(-0.7, 0.7);
+    } else {
+      a = Math.random() * TAU;
+    }
+    const R = Math.hypot(W, H) / 2 + 50;
     x = P.x + Math.cos(a) * R; y = P.y + Math.sin(a) * R;
   }
-  const hs = mult !== undefined ? mult : (1 + S.t / 120 + Math.pow(S.t / 220, 1.6));
+  // 敵HP曲線のマイルド化（後半の極端なHPインフレを抑制）
+  const hs = mult !== undefined ? mult : (1 + S.t / 150 + Math.pow(S.t / 270, 1.32));
   const e = { type, x, y, r: d.r, hp: d.hp * hs, maxHp: d.hp * hs, speed: d.speed * rand(0.9, 1.1),
     dmg: d.dmg * (1 + S.t / 500), xp: d.xp, boss: !!d.boss, name: d.name,
     kx: 0, ky: 0, flash: 0, seed: Math.random() * 10, sawCd: 0, ai: 0, ai2: 0, dash: 0, slow: 1, dead: false };
@@ -887,17 +915,30 @@ function spawnEnemy(type, x, y, mult) {
 }
 function updateSpawns(dt) {
   const t = S.t;
+  // クラスタ湧き角度の定期更新（5〜9秒ごとに主攻勢の方角が変化）
+  S.clusterT -= dt;
+  if (S.clusterT <= 0) {
+    S.clusterAng = Math.random() * TAU;
+    S.clusterT = rand(5, 9);
+  }
   if (!S.finalBoss) {
     const rate = 2.2 + t / 18 + Math.pow(t / 130, 2);
     const cap = Math.min(550, 120 + t * 1.1);
     S.spawnAcc += rate * dt;
     while (S.spawnAcc >= 1) { S.spawnAcc--; if (S.enemies.length < cap) spawnEnemy(pickType(t)); }
-    // 包囲ウェーブ
+    // 包囲ウェーブ（全周リングだが、脱出用の約50度の隙間を空けてプレイヤースキルで抜けられるように）
     const wv = Math.floor(t / 75);
     if (wv > 0 && !S.bossFlags['w' + wv]) {
       S.bossFlags['w' + wv] = true;
       const type = t > 360 ? 'ghost' : 'bat', n = 22 + wv * 5, R = Math.hypot(W, H) / 2 + 30;
-      for (let i = 0; i < n; i++) { const a = i / n * TAU; spawnEnemy(type, P.x + Math.cos(a) * R, P.y + Math.sin(a) * R); }
+      const gap = Math.random() * TAU, gapW = 0.9;
+      for (let i = 0; i < n; i++) {
+        const a = i / n * TAU;
+        let diff = Math.abs(a - gap);
+        if (diff > Math.PI) diff = TAU - diff;
+        if (diff < gapW / 2) continue; // 脱出スリット
+        spawnEnemy(type, P.x + Math.cos(a) * R, P.y + Math.sin(a) * R);
+      }
       S.banner = { txt: '敵の大群が迫る！', col: '#ff8a5c', life: 2 };
     }
   } else {
@@ -1018,7 +1059,8 @@ function update(dt) {
       if (dx * dx + dy * dy < rr * rr) {
         p.hits.add(e);
         const n = Math.hypot(p.vx, p.vy) || 1;
-        hurtEnemy(e, p.kind === 'syringe' ? p.dmg * 1.3 : p.dmg, p.vx / n * 160, p.vy / n * 160);
+        const kb = p.kind === 'fire' ? 340 : 160;
+        hurtEnemy(e, p.kind === 'syringe' ? p.dmg * 1.3 : p.dmg, p.vx / n * kb, p.vy / n * kb);
         if (p.kind === 'fire') {
           burst(p.x, p.y, '#ff9a3c', 6, 130);
           if (p.blast) {
@@ -1126,7 +1168,15 @@ function update(dt) {
   const mag2 = P.magnet * P.magnet;
   for (const g of S.gems) {
     const dx = P.x - g.x, dy = P.y - g.y, d2 = dx * dx + dy * dy;
-    if (!g.mag && d2 < mag2) g.mag = true;
+    if (!g.mag) {
+      if (g.vx || g.vy) {
+        g.x += g.vx * dt; g.y += g.vy * dt;
+        const decay = Math.max(0, 1 - dt * 5.0);
+        g.vx *= decay; g.vy *= decay;
+        if (g.vx * g.vx + g.vy * g.vy < 25) { g.vx = 0; g.vy = 0; }
+      }
+      if (d2 < mag2) g.mag = true;
+    }
     if (g.mag) {
       g.sp = Math.min(900, g.sp + 1400 * dt);
       const d = Math.sqrt(d2) || 1;
@@ -1707,12 +1757,29 @@ function startGame() {
   last = performance.now();
   newGame(); show(null);
 }
+function renderInventoryHtml() {
+  const wSlots = S.weapons.map(w => {
+    const isMax = w.lv >= WEAPONS[w.id].max;
+    const lvText = isMax ? 'MAX' : 'Lv' + w.lv;
+    return `<div class="inv-slot weapon ${isMax ? 'max' : ''}" title="${WEAPONS[w.id].name} (${lvText})"><span class="icon">${WEAPONS[w.id].icon}</span><span class="lv">${lvText}</span></div>`;
+  }).join('');
+  const pSlots = Object.keys(S.passives).map(id => {
+    const lv = S.passives[id];
+    const isMax = lv >= PASSIVES[id].max;
+    const lvText = isMax ? 'MAX' : 'Lv' + lv;
+    return `<div class="inv-slot passive ${isMax ? 'max' : ''}" title="${PASSIVES[id].name} (${lvText})"><span class="icon">${PASSIVES[id].icon}</span><span class="lv">${lvText}</span></div>`;
+  }).join('');
+  return `
+    <div class="inv-box">
+      <div class="inv-title">取得装備</div>
+      <div class="inv-row">${wSlots}</div>
+      ${pSlots ? `<div class="inv-row">${pSlots}</div>` : ''}
+    </div>`;
+}
 function pauseGame() {
   S.state = 'pause';
   S.shake = 0;
-  const wl = S.weapons.map(w => `<span>${WEAPONS[w.id].icon} ${WEAPONS[w.id].name} Lv${w.lv}</span>`).join('');
-  const pa = Object.keys(S.passives).map(id => `<span>${PASSIVES[id].icon} ${PASSIVES[id].name} Lv${S.passives[id]}</span>`).join('');
-  $('pauseInfo').innerHTML = `<div>${FORMS[S.stage].name}（${FORMS[S.stage].title}） Lv${S.level}　⏱ ${fmtTime(S.t)}　💀 ${S.kills}</div><div class="wl">${wl}${pa}</div>`;
+  $('pauseInfo').innerHTML = `<div>${FORMS[S.stage].name}（${FORMS[S.stage].title}） Lv${S.level}　⏱ ${fmtTime(S.t)}　💀 ${S.kills}</div>${renderInventoryHtml()}`;
   show('pause');
 }
 function resumeGame() {
@@ -1733,7 +1800,8 @@ function endGame(clear) {
     $('resultImg').onerror = function () { this.onerror = null; this.src = `img/raw${S.stage + 1}.jpg`; };
     $('resultInfo').innerHTML =
       `${clear ? '機皇帝メカイザーを打ち倒した！<br>' : ''}到達フォーム：<b style="color:${FORMS[S.stage].color}">${FORMS[S.stage].name}</b>（${FORMS[S.stage].title}）<br>` +
-      `生存時間：<b>${fmtTime(S.t)}</b>　レベル：<b>${S.level}</b>　撃破数：<b>${S.kills}</b>`;
+      `生存時間：<b>${fmtTime(S.t)}</b>　レベル：<b>${S.level}</b>　撃破数：<b>${S.kills}</b><br>` +
+      renderInventoryHtml();
     show('result');
   }, clear ? 300 : 900);
 }
