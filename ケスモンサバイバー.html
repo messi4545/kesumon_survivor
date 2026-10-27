@@ -521,12 +521,12 @@ const BG = (() => {
 /* ---------------- 武器 ---------------- */
 const STAT_LABEL = { dmg: 'ダメージ', n: '数', pierce: '貫通', cd: '間隔', area: '範囲', dur: '持続', spd: '回転速度' };
 const WEAPONS = {
-  fireball: { name: '火炎ブレス弾', icon: '🔥', stage: 0, max: 8, desc: '進行方向へ火の玉を吐く',
-    stats: lv => ({ dmg: 11 + lv * 3.5, n: 1 + Math.floor(lv / 2), pierce: 1 + Math.floor(lv / 3), cd: Math.max(0.55, 1.15 - lv * 0.05) }) },
+  fireball: { name: '火炎ブレス弾', icon: '🔥', stage: 0, max: 8, desc: '進行方向へ火の玉を吐く（威力＆速射UP）',
+    stats: lv => ({ dmg: 16 + lv * 5, n: 1 + Math.floor(lv / 2), pierce: 1 + Math.floor((lv + 1) / 3), cd: Math.max(0.38, 0.88 - lv * 0.065) }) },
   tail: { name: '竜尾スラッシュ', icon: '🦎', stage: 0, max: 8, desc: '自分の周囲を一周する円形の弧で敵を薙ぎ払う',
     stats: lv => ({ dmg: 22 + lv * 10, area: 115, cd: Math.max(1.2, 2.8 - lv * 0.18) }) },
-  poop: { name: 'お漏らしボム', icon: '💩', stage: 0, max: 8, desc: '進行方向の逆へうんちを設置。自分で踏むと大爆発して周囲を一掃！',
-    stats: lv => ({ dmg: 60 + lv * 24, area: 140 + lv * 14, dur: 7.5 + lv * 0.5, cd: Math.max(5.5, 9.5 - lv * 0.5) }) },
+  poop: { name: 'お漏らしボム', icon: '💩', stage: 0, max: 8, desc: '進行逆へうんち設置。踏めば集中爆破＆無敵！時間経過でも広範囲爆発',
+    stats: lv => ({ dmg: 42 + lv * 10, area: 105 + lv * 7, dur: 5.0 + lv * 0.2, cd: Math.max(5.5, 9.0 - lv * 0.4) }) },
   syringe: { name: '毒液シリンジ', icon: '💉', stage: 0, max: 8, evoOnly: true, desc: '注射器を投げ、毒沼を作る（進化ごとにLv+2）',
     stats: lv => ({ dmg: 7 + lv * 3.5, n: 1 + Math.floor(lv / 3), area: 42 + lv * 5, dur: 2.8 + lv * 0.25, cd: Math.max(0.85, 1.85 - lv * 0.08) }) },
   saw: { name: '回転メカソー', icon: '⚙️', stage: 1, max: 8, desc: '丸ノコが周囲を回り続け敵を切り刻む',
@@ -741,7 +741,7 @@ function updateWeapons(dt) {
           const base = Math.atan2(P.fy, P.fx);
           for (let i = 0; i < st.n; i++) {
             const a = base + (i - (st.n - 1) / 2) * 0.2;
-            S.projs.push({ kind: 'fire', x: P.x, y: P.y - 10, vx: Math.cos(a) * 430, vy: Math.sin(a) * 430, r: 9 * P.area, dmg: st.dmg, pierce: st.pierce, life: 1.5, hits: new Set() });
+            S.projs.push({ kind: 'fire', x: P.x, y: P.y - 10, vx: Math.cos(a) * 485, vy: Math.sin(a) * 485, r: 10.5 * P.area, dmg: st.dmg, pierce: st.pierce, life: 1.4, hits: new Set() });
           }
           sfx('shoot');
         }
@@ -752,7 +752,7 @@ function updateWeapons(dt) {
           const bx = P.x - P.fx * 44, by = P.y - P.fy * 44;
           S.poops.push({
             x: bx, y: by, r: 22, blastR: st.area * P.area, dmg: st.dmg,
-            life: st.dur, max: st.dur, arm: 0.65, seed: Math.random() * 10
+            life: st.dur, max: st.dur, arm: 0.35, seed: Math.random() * 10
           });
           burst(bx, by, '#a86b2d', 6, 70);
           sfx('poop');
@@ -1041,29 +1041,75 @@ function update(dt) {
   }
   S.puddles = S.puddles.filter(p => p.life > 0);
 
-  // お漏らしボム（自分で踏むと大爆発して周囲を一掃、時間経過で消滅）
+  // うんち爆風による安全なノックバック方向（自分側へ敵を飛ばす事故を完全防止）
+  function poopBlastDir(e, m) {
+    let bx = e.x - m.x, by = e.y - m.y;
+    let bd = Math.hypot(bx, by) || 1;
+    bx /= bd; by /= bd;
+    let px = e.x - P.x, py = e.y - P.y;
+    let pd = Math.hypot(px, py) || 1;
+    px /= pd; py /= pd;
+    // うんちからの爆風がプレイヤーに近づける向き（内積が小さい/負）なら
+    // プレイヤーから遠ざかる方向＋横拡散ベクトルへ安全にリダイレクト
+    const dot = bx * px + by * py;
+    if (dot < 0.35) {
+      const perpX = bx - px * dot, perpY = by - py * dot;
+      let ox = px * 0.85 + perpX * 0.55;
+      let oy = py * 0.85 + perpY * 0.55;
+      const od = Math.hypot(ox, oy) || 1;
+      return [ox / od, oy / od];
+    }
+    return [bx, by];
+  }
+
+  // お漏らしボム（踏めば高威力集中爆破＆無敵、時間経過でも超広範囲自動爆発）
   for (const m of S.poops) {
     m.life -= dt;
     if (m.arm > 0) m.arm -= dt;
-    else if ((P.x - m.x) ** 2 + (P.y - m.y) ** 2 < (P.r + m.r) ** 2) {
+    const isStep = (m.arm <= 0) && ((P.x - m.x) ** 2 + (P.y - m.y) ** 2 < (P.r + m.r + 6) ** 2);
+    const isTimeout = m.life <= 0;
+
+    if (isStep) {
+      // 1) 自分で踏んだ時：集中爆破＋無敵＋ノックバック
       m.life = 0;
-      P.hurt = Math.max(P.hurt, 0.55); // 起爆時に短い無敵で包囲突破しやすくする
-      S.shake = Math.max(S.shake, 14);
+      m.exploded = true;
+      P.hurt = Math.max(P.hurt, 0.45); // 起爆時に短い無敵で包囲突破
+      S.shake = Math.max(S.shake, 12);
       enemiesInCircle(m.x, m.y, m.blastR, e => {
-        const a = Math.atan2(e.y - m.y, e.x - m.x);
-        // ボスにはバランスが崩れないよう倍率を抑え、雑魚は大きく吹き飛ばして突破口を開く
+        const [dirX, dirY] = poopBlastDir(e, m);
         const dmg = e.boss ? m.dmg * 0.55 : m.dmg;
-        hurtEnemy(e, dmg, Math.cos(a) * 680, Math.sin(a) * 680);
+        hurtEnemy(e, dmg, dirX * 580, dirY * 580);
       });
       // 爆風内の敵弾もかき消す
       for (const b of S.ebullets) {
         if ((b.x - m.x) ** 2 + (b.y - m.y) ** 2 < m.blastR ** 2) b.life = 0;
       }
-      S.effects.push({ kind: 'ring', x: m.x, y: m.y, r: m.blastR, col: '255,200,70', life: 0.42, max: 0.42 });
-      S.effects.push({ kind: 'ring', x: m.x, y: m.y, r: m.blastR * 0.68, col: '185,120,45', life: 0.32, max: 0.32 });
-      burst(m.x, m.y, '#ffd24d', 26, 320);
-      burst(m.x, m.y, '#a86b2d', 20, 240);
-      addText(m.x, m.y - 26, '💩BOOM!!', '#ffe066', 22);
+      S.effects.push({ kind: 'ring', x: m.x, y: m.y, r: m.blastR, col: '255,200,70', life: 0.38, max: 0.38 });
+      S.effects.push({ kind: 'ring', x: m.x, y: m.y, r: m.blastR * 0.68, col: '185,120,45', life: 0.28, max: 0.28 });
+      burst(m.x, m.y, '#ffd24d', 20, 260);
+      burst(m.x, m.y, '#a86b2d', 16, 190);
+      addText(m.x, m.y - 26, '💩BOOM!!', '#ffe066', 21);
+      sfx('poopBoom');
+    } else if (isTimeout && !m.exploded) {
+      // 2) 時間経過で時限発動：威力40%で広範囲に牽制
+      m.exploded = true;
+      const timedR = m.blastR * 1.35; // 範囲1.35倍
+      const timedDmg = m.dmg * 0.4;   // 威力40%（指定倍率）
+      S.shake = Math.max(S.shake, 8);
+      enemiesInCircle(m.x, m.y, timedR, e => {
+        const [dirX, dirY] = poopBlastDir(e, m);
+        const dmg = e.boss ? timedDmg * 0.5 : timedDmg;
+        hurtEnemy(e, dmg, dirX * 400, dirY * 400);
+      });
+      // 広範囲の敵弾を一掃
+      for (const b of S.ebullets) {
+        if ((b.x - m.x) ** 2 + (b.y - m.y) ** 2 < timedR ** 2) b.life = 0;
+      }
+      S.effects.push({ kind: 'ring', x: m.x, y: m.y, r: timedR, col: '255,225,120', life: 0.42, max: 0.42 });
+      S.effects.push({ kind: 'ring', x: m.x, y: m.y, r: timedR * 0.6, col: '190,140,60', life: 0.3, max: 0.3 });
+      burst(m.x, m.y, '#ffe27a', 16, 220);
+      burst(m.x, m.y, '#b07534', 12, 160);
+      addText(m.x, m.y - 26, '💩BURST!', '#ffd866', 17);
       sfx('poopBoom');
     }
   }
@@ -1156,6 +1202,7 @@ function statDiff(id, lv) {
 }
 function openLevelUp(alreadyOpen = false) {
   S.state = 'levelup';
+  S.shake = 0;
   S.choices = buildChoices();
   sfx('levelup');
   const box = $('cards'); box.innerHTML = '';
@@ -1204,6 +1251,7 @@ function chooseCard(i) {
 }
 function startEvolution() {
   S.state = 'evolve';
+  S.shake = 0;
   S.evo = { t: 0, from: S.stage, to: S.stage + 1, flashT: 0, sounded: false };
 }
 function finishEvolution() {
@@ -1238,8 +1286,9 @@ function render() {
   ctx.clearRect(0, 0, W, H);
   if (!S) { drawBg(performance.now() / 30, performance.now() / 50); return; }
   const cam = S.cam;
-  cam.x = P.x - W / 2 + (S.shake ? rand(-S.shake, S.shake) : 0);
-  cam.y = P.y - H / 2 + (S.shake ? rand(-S.shake, S.shake) : 0);
+  const shake = S.state === 'play' ? S.shake : 0;
+  cam.x = P.x - W / 2 + (shake ? rand(-shake, shake) : 0);
+  cam.y = P.y - H / 2 + (shake ? rand(-shake, shake) : 0);
   drawBg(cam.x, cam.y);
   ctx.save();
   ctx.translate(-cam.x, -cam.y);
@@ -1256,14 +1305,19 @@ function render() {
   }
   // お漏らしボム（設置うんち）
   for (const m of S.poops) {
-    if (!inView(m.x, m.y, m.blastR)) continue;
+    const timedR = m.blastR * 1.35;
+    if (!inView(m.x, m.y, timedR)) continue;
     const armed = m.arm <= 0;
     const blink = m.life < 2.0 ? (Math.sin(S.t * 22) > 0 ? 1 : 0.35) : 1;
     const pulse = 1 + Math.sin(S.t * 7 + m.seed) * 0.08;
     ctx.save();
     ctx.globalAlpha = blink;
-    // 爆発範囲のうっすらガイド円
-    ctx.strokeStyle = armed ? 'rgba(255,215,80,0.28)' : 'rgba(200,200,200,0.15)';
+    // 外側：時限爆発の超広範囲ガイド円
+    ctx.strokeStyle = 'rgba(255,225,120,0.14)';
+    ctx.lineWidth = 1.5; ctx.setLineDash([4, 10]);
+    ctx.beginPath(); ctx.arc(m.x, m.y, timedR, 0, TAU); ctx.stroke();
+    // 内側：直接踏んだ時の高威力爆発範囲ガイド円
+    ctx.strokeStyle = armed ? 'rgba(255,215,80,0.32)' : 'rgba(200,200,200,0.15)';
     ctx.lineWidth = 2; ctx.setLineDash([8, 8]);
     ctx.beginPath(); ctx.arc(m.x, m.y, m.blastR, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
     // 踏む判定サークル（光る台座）
@@ -1655,6 +1709,7 @@ function startGame() {
 }
 function pauseGame() {
   S.state = 'pause';
+  S.shake = 0;
   const wl = S.weapons.map(w => `<span>${WEAPONS[w.id].icon} ${WEAPONS[w.id].name} Lv${w.lv}</span>`).join('');
   const pa = Object.keys(S.passives).map(id => `<span>${PASSIVES[id].icon} ${PASSIVES[id].name} Lv${S.passives[id]}</span>`).join('');
   $('pauseInfo').innerHTML = `<div>${FORMS[S.stage].name}（${FORMS[S.stage].title}） Lv${S.level}　⏱ ${fmtTime(S.t)}　💀 ${S.kills}</div><div class="wl">${wl}${pa}</div>`;
@@ -1669,6 +1724,7 @@ function resumeGame() {
 function endGame(clear) {
   if (S.state === 'over') return;
   S.state = 'over';
+  S.shake = 0;
   sfx(clear ? 'clear' : 'over');
   setTimeout(() => {
     $('resultTitle').textContent = clear ? '🏆 GAME CLEAR!! 🏆' : 'GAME OVER';
