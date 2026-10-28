@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>ケスモンサバイバー</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- タイトル -->
+<div id="title" class="screen">
+  <div class="title-box">
+    <h1 class="logo">ケスモン<span>サバイバー</span></h1>
+    <p class="sub">KESMON SURVIVOR</p>
+    <div class="evo-line" id="evoLine"></div>
+    <div class="stage-select" id="stageSelect">
+      <button type="button" class="stage-btn active" data-map="1">
+        <span>🌲 STAGE 1：機械の苔森</span>
+        <span class="st-sub">BOSS：機皇帝メカイザー軍団</span>
+      </button>
+      <button type="button" class="stage-btn sea" data-map="2">
+        <span>🌊 STAGE 2：蒼き魔海</span>
+        <span class="st-sub">BOSS：×口桃型ボス軍団（弱点：口）</span>
+      </button>
+    </div>
+    <button id="startBtn" class="btn big">▶ スタート</button>
+    <div class="howto">
+      <p><b>移動</b>：WASD / 矢印キー（スマホは画面をドラッグ）　<b>攻撃</b>：自動</p>
+      <p>敵を倒して経験値を集め、レベルアップで<b>進化</b>せよ！</p>
+      <p>10分生き延びて現れる<b>最終ボス</b>を倒せばクリア</p>
+      <p class="small">Space / Esc / P：ポーズ　M：サウンド ON/OFF</p>
+    </div>
+  </div>
+</div>
+
+<!-- レベルアップ -->
+<div id="levelup" class="screen hidden">
+  <div class="panel">
+    <h2 class="lvup-title">LEVEL UP!</h2>
+    <div id="cards"></div>
+    <p class="small">クリック または 1〜4キーで選択</p>
+  </div>
+</div>
+
+<!-- ポーズ -->
+<div id="pause" class="screen hidden">
+  <div class="panel">
+    <h2>PAUSE</h2>
+    <div id="pauseInfo"></div>
+    <div class="btns">
+      <button id="resumeBtn" class="btn">再開</button>
+      <button id="quitBtn" class="btn ghost">タイトルへ</button>
+    </div>
+  </div>
+</div>
+
+<!-- リザルト -->
+<div id="result" class="screen hidden">
+  <div class="panel">
+    <h2 id="resultTitle">GAME OVER</h2>
+    <img id="resultImg" class="result-img" alt="">
+    <div id="resultInfo"></div>
+    <div class="btns">
+      <button id="nextStageBtn" class="btn hidden">🌊 ステージ2へ</button>
+      <button id="retryBtn" class="btn">もう一度</button>
+      <button id="toTitleBtn" class="btn ghost">タイトルへ</button>
+    </div>
+  </div>
+</div>
+
+<button id="pauseBtn" class="mute pause-btn" title="ポーズ (Space / Esc)">⏸</button>
+<button id="muteBtn" class="mute" title="サウンド (M)">🔊</button>
+
+<script src="game.js"></script>
+</body>
+</html>
